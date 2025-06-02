@@ -17,7 +17,7 @@ const monitoredApis = [
   {
     name: "CentroCosto",
     method: "GET",
-    url: "https://api.tns.co/v21/tablas/CentroCosto/Listar"
+    url: "https://api.tns.co/v2/tablas/CentroCosto/Listar"
   },
   {
     name: "CRM",

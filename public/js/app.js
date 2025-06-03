@@ -25,6 +25,12 @@ const dnsApis = [
   "WebService Oficial"
 ];
 
+function prefixToProvider(prefix) {
+  if (prefix === "chich") return "chichenitza";
+  if (prefix === "coba") return "coba";
+  return ""; // para DNS
+}
+
 // Crear tarjeta individual (grupo o API)
 function createCard(id, name, isGroup = false) {
   if (isGroup) {
@@ -60,16 +66,13 @@ function createCard(id, name, isGroup = false) {
   }
 }
 
-// Renderiza las tarjetas principales de grupos y las DNS
 function renderGroupCards() {
   const groupRow = document.getElementById("group-row");
   groupRow.innerHTML = "";
 
-  // Tarjetas grupo
   groupRow.innerHTML += createCard("chich", "Servicios Chichenitza", true);
   groupRow.innerHTML += createCard("coba", "Servicios Coba", true);
 
-  // Agregar event listeners para toggle detalle
   document.getElementById("card-chich").addEventListener("click", () => {
     toggleGroupDetails("chich");
   });
@@ -78,7 +81,6 @@ function renderGroupCards() {
   });
 }
 
-// Renderiza APIs internas en los contenedores ocultos inicialmente
 function renderApisDetails() {
   const chichDetails = document.getElementById("group-details-chich");
   chichDetails.innerHTML = "";
@@ -102,7 +104,6 @@ function renderApisDetails() {
   });
 }
 
-// Muestra un grupo y oculta el otro (solo uno abierto a la vez)
 function toggleGroupDetails(groupName) {
   const chichDiv = document.getElementById("group-details-chich");
   const cobaDiv = document.getElementById("group-details-coba");
@@ -118,13 +119,17 @@ function toggleGroupDetails(groupName) {
   }
 }
 
-// Actualiza el estado de una API individual
 async function fetchAndUpdate(name, prefix) {
   const id = prefix ? prefix + "-" + name.replace(/\s/g, '-') : name.replace(/\s/g, '-');
+  const cleanName = name.split(":")[0]; // evita errores tipo "Ventas:1"
 
   async function fetchStatus() {
     try {
-      const res = await fetch(`/check-api?name=${encodeURIComponent(name)}`);
+      const provider = prefixToProvider(prefix);
+      const url = provider
+        ? `/check-api?provider=${provider}&name=${encodeURIComponent(cleanName)}`
+        : `/check-api?name=${encodeURIComponent(cleanName)}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       return data;
@@ -135,9 +140,8 @@ async function fetchAndUpdate(name, prefix) {
 
   let data = await fetchStatus();
 
-  // Reintenta si es Bodega y está no disponible o error en la primera consulta
-  if ((!data || !data.status) && name === "Bodega") {
-    await new Promise(r => setTimeout(r, 1000)); // espera 1 segundo
+  if ((!data || !data.status) && cleanName === "Bodega") {
+    await new Promise(r => setTimeout(r, 1000));
     data = await fetchStatus();
   }
 
@@ -158,9 +162,7 @@ async function fetchAndUpdate(name, prefix) {
   return isOk;
 }
 
-// Verifica grupos y DNS
 async function checkGroupsSequentially() {
-  // Chichenitza
   let chichOk = true;
   for (const name of chichenitzaApis) {
     const ok = await fetchAndUpdate(name, "chich");
@@ -169,7 +171,6 @@ async function checkGroupsSequentially() {
   document.getElementById(`group-dot-chich`).className = `status-dot ${chichOk ? 'bg-success' : 'bg-danger'}`;
   document.getElementById(`group-status-chich`).textContent = chichOk ? 'Disponible' : 'Problemas detectados';
 
-  // Coba
   let cobaOk = true;
   for (const name of cobaApis) {
     const ok = await fetchAndUpdate(name, "coba");
@@ -178,13 +179,11 @@ async function checkGroupsSequentially() {
   document.getElementById(`group-dot-coba`).className = `status-dot ${cobaOk ? 'bg-success' : 'bg-danger'}`;
   document.getElementById(`group-status-coba`).textContent = cobaOk ? 'Disponible' : 'Problemas detectados';
 
-  // DNS
   for (const name of dnsApis) {
     await fetchAndUpdate(name, "");
   }
 }
 
-// Inicialización general al cargar
 function init() {
   renderGroupCards();
   renderApisDetails();

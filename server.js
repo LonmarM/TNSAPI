@@ -91,7 +91,7 @@ const monitoredApis = [
   { name: "CRM", method: "GET", url: "https://api.tns.co/v2/tablas/CRM/ListarProcesos" },
   { name: "FormaPago", method: "GET", url: "https://api.tns.co/v2/tablas/FormaPago/ObtenerFormasDePago" },
   { name: "Material", method: "GET", url: "https://api.tns.co/v2/tablas/Material/Listar?codigosucursal=00&filtro=00" },
-  { name: "Tercero", method: "GET", url: "https://api.tns.co/v2/tablas/Tercero/Listar?filtro=1090478122" },
+  { name: "Tercero", method: "GET", url: "https://api.tns.co/v2/tablas/Tercero/Listar" },
   { name: "Ventas", method: "GET", url: "https://api.tns.co/v2/facturacion/Ventas/Listar?codigosucursal=00" },
   { name: "WebService Coba", method: "GET", url: "https://portalwscoba.tns.net.co/", isDnsCheck: true },
   { name: "WebService Chichenitza", method: "GET", url: "https://portalwschichenitza.tns.net.co/", isDnsCheck: true },
@@ -187,7 +187,14 @@ app.get('/check-api', (req, res) => {
 
   res.status(404).json({ status: false, ms: null });
 });
-
+app.post('/refresh', async (req, res) => {
+  try {
+    await checkAllApis();
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

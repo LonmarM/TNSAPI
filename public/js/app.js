@@ -164,6 +164,13 @@ async function fetchAndUpdate(name, prefix) {
   document.getElementById(`dot-${id}`).className = `status-dot ${isOk ? 'bg-success' : 'bg-danger'}`;
   document.getElementById(`status-${id}`).textContent = isOk ? 'Disponible' : 'No disponible';
   document.getElementById(`latency-${id}`).textContent = ms !== null ? `(${ms} ms)` : "";
+  if (!isOk) {
+    const now = new Date();
+    const hh = now.getHours().toString().padStart(2, '0');
+    const mm = now.getMinutes().toString().padStart(2, '0');
+    const failTime = `${hh}:${mm}`;
+    document.getElementById(`status-${id}`).textContent += ` (Fallo a las ${failTime})`;
+  }
   updateHistory(id, isOk);
   return isOk;
   
@@ -244,12 +251,44 @@ function updateHistory(id, status) {
     percentSpan.textContent = `Disponibilidad: ${percent}%`;
   }
 }
+async function loadHistoryFromMongo() {
+  try {
+    const res = await fetch('/history');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
 
-function init() {
-  renderGroupCards();
-  renderApisDetails();
-  checkGroupsSequentially();
-  setInterval(checkGroupsSequentially, 600000); // cada 3 minutos
+    for (const [id, history] of Object.entries(data)) {
+      historyMap.set(id, history);
+
+      // Render historial al cargar
+      const container = document.getElementById(`history-${id}`);
+      if (container) {
+        container.innerHTML = history.map(s => {
+          const color = s === true ? '#198754' : s === false ? '#dc3545' : '#6c757d';
+          return `<div style="flex:1;height:10px;margin:0 1px;background:${color};border-radius:2px;"></div>`;
+        }).join('');
+      }
+
+      // Mostrar porcentaje de disponibilidad
+      const percent = Math.round(history.filter(v => v === true).length / history.length * 100);
+      const percentSpan = document.getElementById(`percent-${id}`);
+      if (percentSpan) {
+        percentSpan.textContent = `Disponibilidad: ${percent}%`;
+      }
+    }
+
+    console.log("📊 Historial cargado desde MongoDB.");
+  } catch (err) {
+    console.error("❌ Error cargando historial desde MongoDB:", err);
+  }
 }
 
+function init() {
+    renderGroupCards();
+    renderApisDetails();
+    loadHistoryFromMongo().then(() => {
+      checkGroupsSequentially();
+    });
+    setInterval(checkGroupsSequentially, 600000); // cada 10 minutos
+  } 
 window.addEventListener("DOMContentLoaded", init);

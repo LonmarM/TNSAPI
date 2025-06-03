@@ -1,3 +1,4 @@
+
 const chichenitzaApis = [
   "Login",
   "Bodega",
@@ -39,7 +40,9 @@ function createCard(id, name, isGroup = false) {
         <div class="border rounded p-4 text-center shadow-sm h-100 d-flex flex-column justify-content-center"
              id="card-${id}" style="cursor:pointer; min-height: 250px;">
           <h5>${name}</h5>
+
           <div class="mt-2">
+          <p><small>Última actualización: <span class="group-updated-time">--:--</span></small></p>
             <span class="status-dot bg-secondary"
                   id="group-dot-${id}"
                   style="display:inline-block;width:16px;height:16px;border-radius:50%;margin-right:8px;"></span>
@@ -59,6 +62,9 @@ function createCard(id, name, isGroup = false) {
                   style="display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;"></span>
             <span id="status-${id}">Pendiente...</span>
             <div id="latency-${id}" class="text-muted small mt-2"></div>
+            <div id="history-${id}" style="display:flex;gap:1px;margin-top:8px;"></div>
+            <div id="percent-${id}" class="text-muted small mt-1"></div>
+
           </div>
         </div>
       </div>
@@ -158,8 +164,9 @@ async function fetchAndUpdate(name, prefix) {
   document.getElementById(`dot-${id}`).className = `status-dot ${isOk ? 'bg-success' : 'bg-danger'}`;
   document.getElementById(`status-${id}`).textContent = isOk ? 'Disponible' : 'No disponible';
   document.getElementById(`latency-${id}`).textContent = ms !== null ? `(${ms} ms)` : "";
-
+  updateHistory(id, isOk);
   return isOk;
+  
 }
 
 async function checkGroupsSequentially() {
@@ -182,13 +189,67 @@ async function checkGroupsSequentially() {
   for (const name of dnsApis) {
     await fetchAndUpdate(name, "");
   }
+  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  document.querySelectorAll(".group-updated-time").forEach(el => el.textContent = now);
+
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Llamar al backend para forzar actualización
+  fetch('/refresh', { method: 'POST' })
+    .then(res => res.json())
+    .then(() => {
+      console.log("🔄 Datos actualizados desde el backend");
+      loadStatuses();  // Luego de actualizar, carga resultados
+    })
+    .catch(err => {
+      console.error("❌ Error actualizando servicios:", err);
+      loadStatuses();  // Incluso si falla, intenta mostrar lo que haya
+    });
+
+  // También se puede recargar automáticamente cada X minutos
+  setInterval(() => {
+    console.log("⏰ Auto refresco...");
+    fetch('/refresh', { method: 'POST' })
+      .then(() => loadStatuses())
+      .catch(console.error);
+  }, 180000); // Cada 3 minutos
+});
+
+const historyMap = new Map();
+
+function updateHistory(id, status) {
+  if (!historyMap.has(id)) {
+    historyMap.set(id, []);
+  }
+  const history = historyMap.get(id);
+  history.unshift(status);
+  if (history.length > 30) {
+    history.pop();
+  }
+
+  // Render barras
+  const container = document.getElementById(`history-${id}`);
+  if (!container) return;
+
+  container.innerHTML = history.map(s => {
+    const color = s === true ? '#198754' : s === false ? '#dc3545' : '#6c757d';
+    return `<div style="flex:1;height:10px;margin:0 1px;background:${color};border-radius:2px;"></div>`;
+  }).join('');
+
+  // Mostrar % de disponibilidad
+  const percent = Math.round(history.filter(v => v === true).length / history.length * 100);
+  const percentSpan = document.getElementById(`percent-${id}`);
+  if (percentSpan) {
+    percentSpan.textContent = `Disponibilidad: ${percent}%`;
+  }
 }
 
 function init() {
   renderGroupCards();
   renderApisDetails();
   checkGroupsSequentially();
-  setInterval(checkGroupsSequentially, 180000); // cada 3 minutos
+  setInterval(checkGroupsSequentially, 600000); // cada 3 minutos
 }
 
 window.addEventListener("DOMContentLoaded", init);

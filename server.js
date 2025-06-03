@@ -51,7 +51,7 @@ const monitoredApis = [
   {
     name: "Tercero",
     method: "GET",
-    url: "https://api.tns.co/v2/tablas/Tercero/Listar"
+    url: "https://api.tns.co/v2/tablas/Tercero/Listar?filtro=1090478122"
   },
   {
     name: "Ventas",

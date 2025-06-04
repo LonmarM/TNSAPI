@@ -242,7 +242,26 @@ const apiStatusSchema = new mongoose.Schema({
   checkedAt: { type: Date, default: Date.now }
 });
 const ApiStatusLog = mongoose.model('ApiStatusLog', apiStatusSchema);
+app.get('/history', async (req, res) => {
+  try {
+    const allKeys = await ApiStatusLog.distinct('key');
 
+    const result = {};
+    for (const key of allKeys) {
+      const lastStatuses = await ApiStatusLog.find({ key })
+        .sort({ checkedAt: -1 })
+        .limit(30)
+        .select('status');
+
+      result[key] = lastStatuses.map(doc => doc.status).reverse(); // del más antiguo al más reciente
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error("❌ Error obteniendo historial:", err);
+    res.status(500).json({ error: "Error obteniendo historial" });
+  }
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Servidor iniciado en http://localhost:${PORT}`);

@@ -204,21 +204,15 @@ async function checkGroupsSequentially() {
 document.addEventListener("DOMContentLoaded", () => {
   // Llamar al backend para forzar actualización
   fetch('/refresh', { method: 'POST' })
-  .then(res => res.json())
-  .then(() => {
-    console.log("🔄 Datos actualizados desde el backend");
-    loadHistoryFromMongo().then(() => {
-      checkGroupsSequentially();
-    });
-  })
-  .catch(err => {
-    console.error("❌ Error actualizando servicios:", err);
-    loadHistoryFromMongo().then(() => {
-      checkGroupsSequentially();
-    });
-  });
-
-
+    .then(res => res.json())
+    .then(() => {
+      console.log("🔄 Datos actualizados desde el backend");
+      // Primero mostrar disponibilidad
+      checkGroupsSequentially().then(() => {
+        // Luego cargar historial
+        loadHistoryFromMongo();
+      });
+    })
   // También se puede recargar automáticamente cada X minutos
 setInterval(() => {
   console.log("⏰ Auto refresco...");

@@ -62,7 +62,7 @@ function createCard(id, name, isGroup = false) {
                   style="display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;"></span>
             <span id="status-${id}">Pendiente...</span>
             <div id="latency-${id}" class="text-muted small mt-2"></div>
-            <div id="history-${id}" style="display:flex;gap:1px;margin-top:8px;"></div>
+            <div id="history-${id}" class="history-bar-container mt-2"></div>
             <div id="percent-${id}" class="text-muted small mt-1"></div>
 
           </div>
@@ -164,13 +164,13 @@ async function fetchAndUpdate(name, prefix) {
   document.getElementById(`dot-${id}`).className = `status-dot ${isOk ? 'bg-success' : 'bg-danger'}`;
   document.getElementById(`status-${id}`).textContent = isOk ? 'Disponible' : 'No disponible';
   document.getElementById(`latency-${id}`).textContent = ms !== null ? `(${ms} ms)` : "";
-  if (!isOk) {
-    const now = new Date();
-    const hh = now.getHours().toString().padStart(2, '0');
-    const mm = now.getMinutes().toString().padStart(2, '0');
-    const failTime = `${hh}:${mm}`;
-    document.getElementById(`status-${id}`).textContent += ` (Fallo a las ${failTime})`;
-  }
+  if (!isOk && data.lastFailure) {
+  const failDate = new Date(data.lastFailure);
+  const hh = failDate.getHours().toString().padStart(2, '0');
+  const mm = failDate.getMinutes().toString().padStart(2, '0');
+  document.getElementById(`status-${id}`).textContent += ` (Fallo a las ${hh}:${mm})`;
+}
+
   updateHistory(id, isOk);
   return isOk;
   
@@ -204,53 +204,72 @@ async function checkGroupsSequentially() {
 document.addEventListener("DOMContentLoaded", () => {
   // Llamar al backend para forzar actualización
   fetch('/refresh', { method: 'POST' })
-    .then(res => res.json())
-    .then(() => {
-      console.log("🔄 Datos actualizados desde el backend");
-      loadStatuses();  // Luego de actualizar, carga resultados
-    })
-    .catch(err => {
-      console.error("❌ Error actualizando servicios:", err);
-      loadStatuses();  // Incluso si falla, intenta mostrar lo que haya
+  .then(res => res.json())
+  .then(() => {
+    console.log("🔄 Datos actualizados desde el backend");
+    loadHistoryFromMongo().then(() => {
+      checkGroupsSequentially();
     });
+  })
+  .catch(err => {
+    console.error("❌ Error actualizando servicios:", err);
+    loadHistoryFromMongo().then(() => {
+      checkGroupsSequentially();
+    });
+  });
+
 
   // También se puede recargar automáticamente cada X minutos
-  setInterval(() => {
-    console.log("⏰ Auto refresco...");
-    fetch('/refresh', { method: 'POST' })
-      .then(() => loadStatuses())
-      .catch(console.error);
-  }, 180000); // Cada 3 minutos
+setInterval(() => {
+  console.log("⏰ Auto refresco...");
+  fetch('/refresh', { method: 'POST' })
+    .then(() => {
+      loadHistoryFromMongo().then(() => {
+        checkGroupsSequentially();
+      });
+    })
+    .catch(console.error);
+}, 600000);
+
 });
 
 const historyMap = new Map();
 
 function updateHistory(id, status) {
-  if (!historyMap.has(id)) {
-    historyMap.set(id, []);
-  }
-  const history = historyMap.get(id);
-  history.unshift(status);
-  if (history.length > 30) {
-    history.pop();
+ if (!history || !Array.isArray(history)) return;
+
+// Render barras por día
+container.innerHTML = history.map(day => {
+  let colorClass = 'bg-secondary'; // gris por defecto
+
+  if (typeof day.percent === 'number' && !isNaN(day.percent)) {
+    if (day.percent === 100) colorClass = 'bg-success';
+    else if (day.percent >= 40) colorClass = 'bg-warning';
+    else colorClass = 'bg-danger';
   }
 
-  // Render barras
-  const container = document.getElementById(`history-${id}`);
-  if (!container) return;
+  const tooltip = `${day.date}\n${day.hours.length ? 'Fallos:\n' + day.hours.join(', ') : 'Sin fallos'}`;
+  
+  return `
+    <div class="history-bar ${colorClass}" 
+         data-bs-toggle="tooltip" 
+         data-bs-title="${tooltip}" 
+         role="presentation"></div>`;
+}).join('');
+// Activar tooltips de Bootstrap
+const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
 
-  container.innerHTML = history.map(s => {
-    const color = s === true ? '#198754' : s === false ? '#dc3545' : '#6c757d';
-    return `<div style="flex:1;height:10px;margin:0 1px;background:${color};border-radius:2px;"></div>`;
-  }).join('');
-
-  // Mostrar % de disponibilidad
-  const percent = Math.round(history.filter(v => v === true).length / history.length * 100);
-  const percentSpan = document.getElementById(`percent-${id}`);
-  if (percentSpan) {
-    percentSpan.textContent = `Disponibilidad: ${percent}%`;
-  }
+// Mostrar porcentaje promedio
+const percentSpan = document.getElementById(`percent-${id}`);
+if (percentSpan && history.length > 0) {
+  const promedio = Math.round(history.reduce((acc, h) => acc + h.percent, 0) / history.length);
+  percentSpan.textContent = `Disponibilidad promedio: ${promedio}%`;
 }
+
+}
+
+
 async function loadHistoryFromMongo() {
   try {
     const res = await fetch('/history');
@@ -258,22 +277,51 @@ async function loadHistoryFromMongo() {
     const data = await res.json();
 
     for (const [id, history] of Object.entries(data)) {
+      if (!Array.isArray(history)) continue;
+
       historyMap.set(id, history);
 
-      // Render historial al cargar
+      // 👉 Asegúrate de definir container dentro del loop
       const container = document.getElementById(`history-${id}`);
       if (container) {
-        container.innerHTML = history.map(s => {
-          const color = s === true ? '#198754' : s === false ? '#dc3545' : '#6c757d';
-          return `<div style="flex:1;height:10px;margin:0 1px;background:${color};border-radius:2px;"></div>`;
+        container.innerHTML = history.map(day => {
+          let colorClass = 'bg-secondary'; // default
+
+          if (typeof day.percent === 'number' && !isNaN(day.percent)) {
+            if (day.percent === 100) colorClass = 'bg-success';
+            else if (day.percent >= 40) colorClass = 'bg-warning';
+            else colorClass = 'bg-danger';
+          }
+
+          const tooltip = `${day.date}\n${day.hours.length ? 'Fallos:\n' + day.hours.join(', ') : 'Sin fallos'}`;
+
+          return `
+          <div class="history-bar-wrapper">
+            <div class="history-bar ${colorClass}"></div>
+            <div class="history-tooltip">${tooltip.replace(/\n/g, '<br>')}</div>
+          </div>`;
+
         }).join('');
+
+        // Inicializar tooltips
+        // Destruir tooltips antiguos si ya existen
+        const tooltipTriggerList = container.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(el => {
+          const existingTooltip = bootstrap.Tooltip.getInstance(el);
+          if (existingTooltip) {
+            existingTooltip.dispose();
+          }
+          new bootstrap.Tooltip(el);
+        });
+
       }
 
-      // Mostrar porcentaje de disponibilidad
-      const percent = Math.round(history.filter(v => v === true).length / history.length * 100);
       const percentSpan = document.getElementById(`percent-${id}`);
-      if (percentSpan) {
-        percentSpan.textContent = `Disponibilidad: ${percent}%`;
+      if (percentSpan && history.length > 0) {
+        const promedio = Math.round(
+          history.reduce((acc, h) => acc + h.percent, 0) / history.length
+        );
+        percentSpan.textContent = `Disponibilidad: ${promedio}%`;
       }
     }
 
@@ -282,6 +330,7 @@ async function loadHistoryFromMongo() {
     console.error("❌ Error cargando historial desde MongoDB:", err);
   }
 }
+
 
 function init() {
     renderGroupCards();

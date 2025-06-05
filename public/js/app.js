@@ -249,7 +249,7 @@ container.innerHTML = history.map(day => {
         const [hh, mm] = h.split(':').map(Number);
         let date = new Date();
         date.setUTCHours(hh, mm, 0, 0); // usar UTC
-        date.setHours(date.getHours() - 5); // ajustar a UTC-5
+        date.setHours(date.getHours()); // ajustar a UTC-5
         const localH = String(date.getHours()).padStart(2, '0');
         const localM = String(date.getMinutes()).padStart(2, '0');
         return `${localH}:${localM}`;
@@ -306,7 +306,7 @@ const tooltip = `${day.date}\n${
         const [hh, mm] = h.split(':').map(Number);
         let date = new Date();
         date.setUTCHours(hh, mm, 0, 0); // usar UTC
-        date.setHours(date.getHours() - 5); // ajustar a UTC-5
+        date.setHours(date.getHours()); // ajustar a UTC-5
         const localH = String(date.getHours()).padStart(2, '0');
         const localM = String(date.getMinutes()).padStart(2, '0');
         return `${localH}:${localM}`;

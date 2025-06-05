@@ -361,3 +361,4 @@ function init() {
     setInterval(checkGroupsSequentially, 600000); // cada 10 minutos
   } 
 window.addEventListener("DOMContentLoaded", init);
+

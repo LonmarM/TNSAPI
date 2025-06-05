@@ -2,6 +2,8 @@ const express = require('express');
 const fetch = require('node-fetch');
 const path = require('path');
 require('dotenv').config();
+const { sendWhatsAppMessage } = require('./notificaciones');
+
 
 const app = express();
 app.use(express.json());
@@ -97,10 +99,10 @@ const monitoredApis = [
   { name: "WebService Chichenitza", method: "GET", url: "https://portalwschichenitza.tns.net.co/", isDnsCheck: true },
   { name: "WebService Oficial", method: "GET", url: "https://portalwsoficial.tns.net.co/", isDnsCheck: true }
 ];
-
 async function checkApi(api, prefix, esAutomatico = false) {
   const key = prefix ? `${prefix}-${api.name.replace(/\s/g, '-')}` : api.name.replace(/\s/g, '-');
   const startTime = Date.now();
+  const estadoAnterior = apiStatus[key]?.status ?? null;
 
   try {
     if (api.isLogin) {
@@ -117,21 +119,22 @@ async function checkApi(api, prefix, esAutomatico = false) {
       const ms = Date.now() - startTime;
       const data = await res.json();
       const ok = res.ok && data.status === true && !!data.data;
+      const estado = ok;
 
       apiStatus[key] = {
-        status: ok,
+        status: estado,
         ms,
         lastChecked: new Date().toISOString()
       };
 
       if (esAutomatico) {
-        await ApiStatusLog.create({
-          key,
-          name: api.name,
-          prefix: prefix || 'dns',
-          status: ok,
-          ms
-        });
+        await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms });
+      }
+
+      if (esAutomatico && estado !== estadoAnterior && estadoAnterior !== null) {
+        const mensaje = `⚠️ Servicio "${api.name}" cambió de estado:\n${estadoAnterior ? '✅' : '❌'} ➡️ ${estado ? '✅' : '❌'}`;
+        console.log(`[ALERTA] ${api.name}: ${estadoAnterior} -> ${estado}`);
+        sendWhatsAppMessage(mensaje);
       }
 
       return;
@@ -145,42 +148,46 @@ async function checkApi(api, prefix, esAutomatico = false) {
 
     const res = await fetch(api.url, { method: api.method, headers });
     const ms = Date.now() - startTime;
+    const estado = res.ok;
 
     apiStatus[key] = {
-      status: res.ok,
+      status: estado,
       ms,
       lastChecked: new Date().toISOString()
     };
 
     if (esAutomatico) {
-      await ApiStatusLog.create({
-        key,
-        name: api.name,
-        prefix: prefix || 'dns',
-        status: res.ok,
-        ms
-      });
+      await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms });
+    }
+
+    if (esAutomatico && estado !== estadoAnterior && estadoAnterior !== null) {
+      const mensaje = `⚠️ Servicio "${api.name}" cambió de estado:\n${estadoAnterior ? '✅' : '❌'} ➡️ ${estado ? '✅' : '❌'}`;
+      console.log(`[ALERTA] ${api.name}: ${estadoAnterior} -> ${estado}`);
+      sendWhatsAppMessage(mensaje);
     }
 
   } catch (error) {
+    const estado = false;
+
     apiStatus[key] = {
-      status: false,
+      status: estado,
       ms: null,
       lastChecked: new Date().toISOString(),
       error: error.message
     };
 
     if (esAutomatico) {
-      await ApiStatusLog.create({
-        key,
-        name: api.name,
-        prefix: prefix || 'dns',
-        status: false,
-        ms: null
-      });
+      await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms: null });
+    }
+
+    if (esAutomatico && estado !== estadoAnterior && estadoAnterior !== null) {
+      const mensaje = `⚠️ Servicio "${api.name}" cambió de estado:\n${estadoAnterior ? '✅' : '❌'} ➡️ ❌`;
+      console.log(`[ALERTA] ${api.name}: ${estadoAnterior} -> ❌`);
+      sendWhatsAppMessage(mensaje);
     }
   }
 }
+
 
 async function checkAllApis(esAutomatico = false) {
   for (const api of monitoredApis) {
@@ -304,3 +311,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Servidor iniciado en http://localhost:${PORT}`);
 });
+sendWhatsAppMessage("🧪 Prueba de mensaje desde el sistema de monitoreo.")

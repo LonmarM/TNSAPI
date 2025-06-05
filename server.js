@@ -98,7 +98,7 @@ const monitoredApis = [
   { name: "WebService Oficial", method: "GET", url: "https://portalwsoficial.tns.net.co/", isDnsCheck: true }
 ];
 
-async function checkApi(api, prefix) {
+async function checkApi(api, prefix, esAutomatico = false) {
   const key = prefix ? `${prefix}-${api.name.replace(/\s/g, '-')}` : api.name.replace(/\s/g, '-');
   const startTime = Date.now();
 
@@ -124,13 +124,15 @@ async function checkApi(api, prefix) {
         lastChecked: new Date().toISOString()
       };
 
-      await ApiStatusLog.create({
-        key,
-        name: api.name,
-        prefix: prefix || 'dns',
-        status: ok,
-        ms
-      });
+      if (esAutomatico) {
+        await ApiStatusLog.create({
+          key,
+          name: api.name,
+          prefix: prefix || 'dns',
+          status: ok,
+          ms
+        });
+      }
 
       return;
     }
@@ -150,13 +152,15 @@ async function checkApi(api, prefix) {
       lastChecked: new Date().toISOString()
     };
 
-    await ApiStatusLog.create({
-      key,
-      name: api.name,
-      prefix: prefix || 'dns',
-      status: res.ok,
-      ms
-    });
+    if (esAutomatico) {
+      await ApiStatusLog.create({
+        key,
+        name: api.name,
+        prefix: prefix || 'dns',
+        status: res.ok,
+        ms
+      });
+    }
 
   } catch (error) {
     apiStatus[key] = {
@@ -166,33 +170,36 @@ async function checkApi(api, prefix) {
       error: error.message
     };
 
-    await ApiStatusLog.create({
-      key,
-      name: api.name,
-      prefix: prefix || 'dns',
-      status: false,
-      ms: null
-    });
+    if (esAutomatico) {
+      await ApiStatusLog.create({
+        key,
+        name: api.name,
+        prefix: prefix || 'dns',
+        status: false,
+        ms: null
+      });
+    }
   }
 }
 
-async function checkAllApis() {
+async function checkAllApis(esAutomatico = false) {
   for (const api of monitoredApis) {
     if (chichenitzaApis.includes(api.name)) {
-      await checkApi(api, "chich");
+      await checkApi(api, "chich", esAutomatico);
     }
     if (cobaApis.includes(api.name)) {
-      await checkApi(api, "coba");
+      await checkApi(api, "coba", esAutomatico);
     }
     if (dnsApis.includes(api.name)) {
-      await checkApi(api, ""); // DNS no lleva prefijo
+      await checkApi(api, "", esAutomatico);
     }
   }
   console.log("✔️ Chequeo completado", new Date().toLocaleTimeString());
 }
 
-checkAllApis();
-setInterval(checkAllApis, 180000);
+
+checkAllApis(true);
+setInterval(checkAllApis, 600000);
 
 app.get('/check-api', (req, res) => {
   const { provider, name } = req.query;
@@ -206,16 +213,18 @@ app.get('/check-api', (req, res) => {
     key = `coba-${key}`;
   }
 
-  if (apiStatus[key]) {
-    return res.json(apiStatus[key]);
-  }
-
-  res.status(404).json({ status: false, ms: null });
+if (apiStatus[key]) {
+  return res.json({
+    ...apiStatus[key],
+    lastFailure: apiStatus[key].status ? null : apiStatus[key].lastChecked
+  });
+}
+ res.status(404).json({ status: false, ms: null });
 });
 
 app.post('/refresh', async (req, res) => {
   try {
-    await checkAllApis();
+    await checkAllApis(false);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
@@ -242,26 +251,55 @@ const apiStatusSchema = new mongoose.Schema({
   checkedAt: { type: Date, default: Date.now }
 });
 const ApiStatusLog = mongoose.model('ApiStatusLog', apiStatusSchema);
+const moment = require('moment'); // npm install moment
+
 app.get('/history', async (req, res) => {
   try {
     const allKeys = await ApiStatusLog.distinct('key');
 
     const result = {};
-    for (const key of allKeys) {
-      const lastStatuses = await ApiStatusLog.find({ key })
-        .sort({ checkedAt: -1 })
-        .limit(30)
-        .select('status');
+    const daysLimit = 15;
 
-      result[key] = lastStatuses.map(doc => doc.status).reverse(); // del más antiguo al más reciente
+    for (const key of allKeys) {
+      const entries = await ApiStatusLog.find({ key })
+        .sort({ checkedAt: -1 })
+        .limit(4320); 
+
+      const grouped = {};
+
+      entries.forEach(doc => {
+        const dateStr = moment(doc.checkedAt).format('YYYY-MM-DD');
+        const timeStr = moment(doc.checkedAt).format('HH:mm');
+        if (!grouped[dateStr]) {
+          grouped[dateStr] = { total: 0, fails: [], ok: 0 };
+        }
+        grouped[dateStr].total += 1;
+        if (doc.status) {
+          grouped[dateStr].ok += 1;
+        } else {
+          grouped[dateStr].fails.push(timeStr);
+        }
+      });
+
+      const dailyHistory = Object.entries(grouped)
+        .sort((a, b) => new Date(a[0]) - new Date(b[0])) // ascendente
+        .slice(-daysLimit)
+        .map(([date, info]) => ({
+          date,
+          percent: Math.round((info.ok / info.total) * 100),
+          hours: info.fails
+        }));
+
+      result[key] = dailyHistory;
     }
 
     res.json(result);
   } catch (err) {
-    console.error("❌ Error obteniendo historial:", err);
-    res.status(500).json({ error: "Error obteniendo historial" });
+    console.error("❌ Error agrupando historial:", err);
+    res.status(500).json({ error: "Error agrupando historial" });
   }
 });
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Servidor iniciado en http://localhost:${PORT}`);

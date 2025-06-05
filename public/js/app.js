@@ -242,8 +242,21 @@ container.innerHTML = history.map(day => {
     else colorClass = 'bg-danger';
   }
 
-  const tooltip = `${day.date}\n${day.hours.length ? 'Fallos:\n' + day.hours.join(', ') : 'Sin fallos'}`;
-  
+
+  const tooltip = `${day.date}\n${
+  day.hours.length
+    ? 'Fallos:\n' + day.hours.map(h => {
+        const [hh, mm] = h.split(':').map(Number);
+        let date = new Date();
+        date.setUTCHours(hh, mm, 0, 0); // usar UTC
+        date.setHours(date.getHours() - 5); // ajustar a UTC-5
+        const localH = String(date.getHours()).padStart(2, '0');
+        const localM = String(date.getMinutes()).padStart(2, '0');
+        return `${localH}:${localM}`;
+      }).join(', ')
+    : 'Sin fallos'
+}`;
+
   return `
     <div class="history-bar ${colorClass}" 
          data-bs-toggle="tooltip" 
@@ -287,7 +300,20 @@ async function loadHistoryFromMongo() {
             else colorClass = 'bg-danger';
           }
 
-          const tooltip = `${day.date}\n${day.hours.length ? 'Fallos:\n' + day.hours.join(', ') : 'Sin fallos'}`;
+const tooltip = `${day.date}\n${
+  day.hours.length
+    ? 'Fallos:\n' + day.hours.map(h => {
+        const [hh, mm] = h.split(':').map(Number);
+        let date = new Date();
+        date.setUTCHours(hh, mm, 0, 0); // usar UTC
+        date.setHours(date.getHours() - 5); // ajustar a UTC-5
+        const localH = String(date.getHours()).padStart(2, '0');
+        const localM = String(date.getMinutes()).padStart(2, '0');
+        return `${localH}:${localM}`;
+      }).join(', ')
+    : 'Sin fallos'
+}`;
+
 
           return `
           <div class="history-bar-wrapper">

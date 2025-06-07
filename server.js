@@ -270,7 +270,7 @@ app.get('/history', async (req, res) => {
     for (const key of allKeys) {
       const entries = await ApiStatusLog.find({ key })
         .sort({ checkedAt: -1 })
-        .limit(4320); 
+
 
       const grouped = {};
 

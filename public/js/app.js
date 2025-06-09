@@ -24,7 +24,7 @@ const dnsApis = [
   "WebService Coba",
   "WebService Chichenitza",
   "WebService Oficial",
-  "Portal Web"
+  //"Portal Web"
 ];
 
 function prefixToProvider(prefix) {
@@ -99,7 +99,7 @@ function renderGroupCards() {
 
   groupRow.innerHTML += createCard("chich", "API's Chichenitza", true);
   groupRow.innerHTML += createCard("coba", "API's Coba", true);
-
+  groupRow.innerHTML += createCard("Portal-Web", "Portal Web");
   document.getElementById("card-chich").addEventListener("click", () => {
     toggleGroupDetails("chich");
   });

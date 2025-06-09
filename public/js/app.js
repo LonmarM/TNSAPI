@@ -24,7 +24,7 @@ const dnsApis = [
   "WebService Coba",
   "WebService Chichenitza",
   "WebService Oficial",
-  //"Portal Web"
+  "Portal Web"
 ];
 
 function prefixToProvider(prefix) {
@@ -127,8 +127,9 @@ function renderApisDetails() {
   dnsRow.innerHTML = "";
   dnsApis.forEach(name => {
     const id = name.replace(/\s/g, '-');
+    if(name!="Portal Web"){
     dnsRow.innerHTML += createCard(id, name);
-  });
+    }});
 }
 
 function toggleGroupDetails(groupName) {

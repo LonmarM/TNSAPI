@@ -35,6 +35,26 @@ function prefixToProvider(prefix) {
 
 // Crear tarjeta individual (grupo o API)
 function createCard(id, name, isGroup = false) {
+  if (name=="Portal Web"){
+        return `
+      <div class="col-12 col-lg-6">
+        <div class="border rounded p-4 text-center shadow-sm h-100 d-flex flex-column justify-content-center"
+             id="card-${id}" style="cursor:pointer; min-height: 250px;">
+          <h5>${name}</h5>
+
+          <div class="mt-2">
+            <span class="status-dot bg-secondary"
+                  id="dot-${id}"
+                  style="display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;"></span>
+            <span id="status-${id}">Pendiente...</span>
+            <div id="latency-${id}" class="text-muted small mt-2"></div>
+            <div id="history-${id}" class="history-bar-container mt-2"></div>
+            <div id="percent-${id}" class="text-muted small mt-1"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
   if (isGroup) {
     return `
       <div class="col-12 col-lg-6">

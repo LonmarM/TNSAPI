@@ -23,7 +23,8 @@ const cobaApis = [
 const dnsApis = [
   "WebService Coba",
   "WebService Chichenitza",
-  "WebService Oficial"
+  "WebService Oficial",
+  "Portal Web"
 ];
 
 function prefixToProvider(prefix) {

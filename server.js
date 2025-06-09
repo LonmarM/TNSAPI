@@ -97,7 +97,8 @@ const monitoredApis = [
   { name: "Ventas", method: "GET", url: "https://api.tns.co/v2/facturacion/Ventas/Listar?codigosucursal=00" },
   { name: "WebService Coba", method: "GET", url: "https://portalwscoba.tns.net.co/", isDnsCheck: true },
   { name: "WebService Chichenitza", method: "GET", url: "https://portalwschichenitza.tns.net.co/", isDnsCheck: true },
-  { name: "WebService Oficial", method: "GET", url: "https://portalwsoficial.tns.net.co/", isDnsCheck: true }
+  { name: "WebService Oficial", method: "GET", url: "https://portalwsoficial.tns.net.co/", isDnsCheck: true },
+  { name: "Portal Web", method: "GET", url: "https://portal.tns.co/", isDnsCheck: true }
 ];
 async function checkApi(api, prefix, esAutomatico = false) {
   const key = prefix ? `${prefix}-${api.name.replace(/\s/g, '-')}` : api.name.replace(/\s/g, '-');

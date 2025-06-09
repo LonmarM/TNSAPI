@@ -11,7 +11,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const chichenitzaApis = ["Login", "Bodega", "CentroCosto", "CRM", "FormaPago", "Material", "Tercero", "Ventas"];
 const cobaApis = ["Login", "Bodega", "CentroCosto", "CRM", "FormaPago", "Material", "Tercero", "Ventas"];
-const dnsApis = ["WebService Coba", "WebService Chichenitza", "WebService Oficial"];
+const dnsApis = ["WebService Coba", "WebService Chichenitza", "WebService Oficial", "Portal Web"];
 const apiStatus = {};
 
 let cachedTokenChich = null;

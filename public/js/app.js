@@ -76,8 +76,8 @@ function renderGroupCards() {
   const groupRow = document.getElementById("group-row");
   groupRow.innerHTML = "";
 
-  groupRow.innerHTML += createCard("chich", "Servicios Chichenitza", true);
-  groupRow.innerHTML += createCard("coba", "Servicios Coba", true);
+  groupRow.innerHTML += createCard("chich", "API's Chichenitza", true);
+  groupRow.innerHTML += createCard("coba", "API's Coba", true);
 
   document.getElementById("card-chich").addEventListener("click", () => {
     toggleGroupDetails("chich");

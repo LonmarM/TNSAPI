@@ -266,7 +266,7 @@ app.get('/history', async (req, res) => {
     const allKeys = await ApiStatusLog.distinct('key');
 
     const result = {};
-    const daysLimit = 15;
+    const daysLimit = 30;
 
     for (const key of allKeys) {
       const entries = await ApiStatusLog.find({ key })

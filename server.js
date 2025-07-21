@@ -129,7 +129,13 @@ async function checkApi(api, prefix, esAutomatico = false) {
       };
 
       if (esAutomatico) {
-        await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms });
+                try {
+          await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms });
+          console.log(`💾 Guardado en Mongo: ${key} | Estado: ${estado ? '✅' : '❌'} | Tiempo: ${ms ?? 'N/A'}ms`);
+        } catch (err) {
+          console.error(`❌ Error al guardar en Mongo:`, err.message);
+        }
+
       }
 
       if (esAutomatico && estado !== estadoAnterior && estadoAnterior !== null) {
@@ -158,7 +164,13 @@ async function checkApi(api, prefix, esAutomatico = false) {
     };
 
     if (esAutomatico) {
-      await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms });
+            try {
+        await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms });
+        console.log(`💾 Guardado en Mongo: ${key} | Estado: ${estado ? '✅' : '❌'} | Tiempo: ${ms ?? 'N/A'}ms`);
+      } catch (err) {
+        console.error(`❌ Error al guardar en Mongo:`, err.message);
+      }
+
     }
 
     if (esAutomatico && estado !== estadoAnterior && estadoAnterior !== null) {
@@ -178,7 +190,13 @@ async function checkApi(api, prefix, esAutomatico = false) {
     };
 
     if (esAutomatico) {
-      await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms: null });
+            try {
+        await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms });
+        console.log(`💾 Guardado en Mongo: ${key} | Estado: ${estado ? '✅' : '❌'} | Tiempo: ${ms ?? 'N/A'}ms`);
+      } catch (err) {
+        console.error(`❌ Error al guardar en Mongo:`, err.message);
+      }
+
     }
 
     if (esAutomatico && estado !== estadoAnterior && estadoAnterior !== null) {

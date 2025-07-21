@@ -259,19 +259,20 @@ const apiStatusSchema = new mongoose.Schema({
   checkedAt: { type: Date, default: Date.now }
 });
 const ApiStatusLog = mongoose.model('ApiStatusLog', apiStatusSchema);
-const moment = require('moment'); // npm install moment
+const moment = require('moment');
 
 app.get('/history', async (req, res) => {
   try {
     const allKeys = await ApiStatusLog.distinct('key');
-
     const result = {};
     const daysLimit = 30;
+    const thirtyDaysAgo = moment().subtract(daysLimit, 'days').startOf('day').toDate();
 
     for (const key of allKeys) {
-      const entries = await ApiStatusLog.find({ key })
-        .sort({ checkedAt: -1 })
-
+      const entries = await ApiStatusLog.find({
+        key,
+        checkedAt: { $gte: thirtyDaysAgo }
+      }).sort({ checkedAt: 1 });
 
       const grouped = {};
 
@@ -290,8 +291,7 @@ app.get('/history', async (req, res) => {
       });
 
       const dailyHistory = Object.entries(grouped)
-        .sort((a, b) => new Date(a[0]) - new Date(b[0])) // ascendente
-        .slice(-daysLimit)
+        .sort((a, b) => new Date(a[0]) - new Date(b[0]))
         .map(([date, info]) => ({
           date,
           percent: Math.round((info.ok / info.total) * 100),
@@ -312,4 +312,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Servidor iniciado en http://localhost:${PORT}`);
 });
-sendWhatsAppMessage("🧪 Prueba de mensaje desde el sistema de monitoreo.")
+sendWhatsAppMessage("Reinicio de Servidor STATUS TNS")

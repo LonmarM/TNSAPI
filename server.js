@@ -128,7 +128,6 @@ async function checkApi(api, prefix, esAutomatico = false) {
         lastChecked: new Date().toISOString()
       };
 
-      if (esAutomatico) {
                 try {
           await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms });
           console.log(`💾 Guardado en Mongo: ${key} | Estado: ${estado ? '✅' : '❌'} | Tiempo: ${ms ?? 'N/A'}ms`);
@@ -136,7 +135,6 @@ async function checkApi(api, prefix, esAutomatico = false) {
           console.error(`❌ Error al guardar en Mongo:`, err.message);
         }
 
-      }
 
       if (esAutomatico && estado !== estadoAnterior && estadoAnterior !== null) {
         const mensaje = `⚠️ Servicio "${api.name}" cambió de estado:\n${estadoAnterior ? '✅' : '❌'} ➡️ ${estado ? '✅' : '❌'}`;
@@ -162,8 +160,6 @@ async function checkApi(api, prefix, esAutomatico = false) {
       ms,
       lastChecked: new Date().toISOString()
     };
-
-    if (esAutomatico) {
             try {
         await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms });
         console.log(`💾 Guardado en Mongo: ${key} | Estado: ${estado ? '✅' : '❌'} | Tiempo: ${ms ?? 'N/A'}ms`);
@@ -171,7 +167,7 @@ async function checkApi(api, prefix, esAutomatico = false) {
         console.error(`❌ Error al guardar en Mongo:`, err.message);
       }
 
-    }
+
 
     if (esAutomatico && estado !== estadoAnterior && estadoAnterior !== null) {
       const mensaje = `⚠️ Servicio "${api.name}" cambió de estado:\n${estadoAnterior ? '✅' : '❌'} ➡️ ${estado ? '✅' : '❌'}`;
@@ -189,7 +185,7 @@ async function checkApi(api, prefix, esAutomatico = false) {
       error: error.message
     };
 
-    if (esAutomatico) {
+
             try {
         await ApiStatusLog.create({ key, name: api.name, prefix: prefix || 'dns', status: estado, ms });
         console.log(`💾 Guardado en Mongo: ${key} | Estado: ${estado ? '✅' : '❌'} | Tiempo: ${ms ?? 'N/A'}ms`);
@@ -197,7 +193,6 @@ async function checkApi(api, prefix, esAutomatico = false) {
         console.error(`❌ Error al guardar en Mongo:`, err.message);
       }
 
-    }
 
     if (esAutomatico && estado !== estadoAnterior && estadoAnterior !== null) {
       const mensaje = `⚠️ Servicio "${api.name}" cambió de estado:\n${estadoAnterior ? '✅' : '❌'} ➡️ ❌`;

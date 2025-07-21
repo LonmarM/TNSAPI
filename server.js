@@ -205,9 +205,7 @@ async function checkAllApis(esAutomatico = false) {
   console.log("✔️ Chequeo completado", new Date().toLocaleTimeString());
 }
 
-
-checkAllApis(true);
-setInterval(checkAllApis, 600000);
+setInterval(() => checkAllApis(true), 600000);
 
 app.get('/check-api', (req, res) => {
   const { provider, name } = req.query;
